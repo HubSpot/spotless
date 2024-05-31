@@ -418,6 +418,8 @@ spotless {
       .editorConfigOverride(
         mapOf(
           "indent_size" to 2,
+          // intellij_idea is the default style we preset in Spotless, you can override it referring to https://pinterest.github.io/ktlint/latest/rules/code-styles.
+          "ktlint_code_style" to "intellij_idea",
         )
       )
       .customRuleSets(
@@ -700,7 +702,7 @@ All configuration settings are optional, they are described in detail [here](htt
 ```gradle
 spotless {
   pom {
-    sortPom('3.4.0')
+    sortPom('4.0.0')
       .encoding('UTF-8') // The encoding of the pom files
       .lineSeparator(System.getProperty('line.separator')) // line separator to use
       .expandEmptyElements(true) // Should empty elements be expanded
@@ -710,6 +712,7 @@ spotless {
       .nrOfIndentSpace(2) // Indentation
       .indentBlankLines(false) // Should empty lines be indented
       .indentSchemaLocation(false) // Should schema locations be indented
+      .indentAttribute(null) // Should the xml attributes be indented
       .predefinedSortOrder('recommended_2008_06') // Sort order of elements: https://github.com/Ekryd/sortpom/wiki/PredefinedSortOrderProfiles
       .sortOrderFile(null) // Custom sort order of elements: https://raw.githubusercontent.com/Ekryd/sortpom/master/sorter/src/main/resources/custom_1.xml
       .sortDependencies(null) // Sort dependencies: https://github.com/Ekryd/sortpom/wiki/SortDependencies
@@ -1094,7 +1097,7 @@ spotless {
   gherkin {
     target 'src/**/*.feature'     // required to be set explicitly
     gherkinUtils()
-      .version('8.0.2')           // optional: custom version of 'io.cucumber:gherkin-utils'
+      .version('9.0.0')           // optional: custom version of 'io.cucumber:gherkin-utils'
   }
 }
 ```
@@ -1295,12 +1298,6 @@ to true.
 a formatter that for the frontend written in Rust, which has a native binary, does not require Node.js and as such,
 is pretty fast. It can currently format JavaScript, TypeScript, JSX, and JSON, and may support
 [more frontend languages](https://biomejs.dev/internals/language-support/) such as CSS in the future.
-
-Note: Biome [was formerly called Rome](https://biomejs.dev/blog/annoucing-biome/). Configurations with
-the old `<rome>` tag and `rome(...)` function are still supported for the time being. This will be removed
-in a future version, you should migrate to the new `<biome>` tag or `biome(...)` function. The configuration
-remains the same, you only need to update the version. If you are using a custom `rome.json` configuration file,
-you need to rename it to `biome.json`.
 
 You can use Biome in any language-specific format for supported languages, but
 usually you will be creating a generic format.

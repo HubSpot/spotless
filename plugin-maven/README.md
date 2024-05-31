@@ -419,6 +419,8 @@ Additionally, `editorConfigOverride` options will override what's supplied in `.
   <editorConfigOverride> <!-- optional -->
     <ij_kotlin_allow_trailing_comma>true</ij_kotlin_allow_trailing_comma>
     <ij_kotlin_allow_trailing_comma_on_call_site>true</ij_kotlin_allow_trailing_comma_on_call_site>
+    <!-- intellij_idea is the default style we preset in Spotless, you can override it referring to https://pinterest.github.io/ktlint/latest/rules/code-styles. -->
+    <ktlint_code_style>intellij_idea</ktlint_code_style>
   </editorConfigOverride>
   <customRuleSets> <!-- optional -->
     <value>io.nlopez.compose.rules:ktlint:0.3.3</value>
@@ -666,6 +668,8 @@ All configuration settings are optional, they are described in detail [here](htt
   <indentBlankLines>false</indentBlankLines> <!-- Should empty lines be indented -->
 
   <indentSchemaLocation>false</indentSchemaLocation> <!-- Should schema locations be indented -->
+
+  <indentAttribute></indentAttribute> <!-- Should the xml attributes be indented -->
 
   <predefinedSortOrder>recommended_2008_06</predefinedSortOrder> <!-- Sort order of elements: https://github.com/Ekryd/sortpom/wiki/PredefinedSortOrderProfiles-->
 
@@ -1078,7 +1082,7 @@ Uses a Gherkin pretty-printer that optionally allows configuring the number of s
 
 ```xml
 <gherkinUtils>
-  <version>8.0.2</version>                 <!-- optional: Custom version of 'io.cucumber:gherkin-utils' -->
+  <version>9.0.0</version>                 <!-- optional: Custom version of 'io.cucumber:gherkin-utils' -->
 </gherkinUtils>
 ```
 
@@ -1327,12 +1331,6 @@ to true.
 a formatter that for the frontend written in Rust, which has a native binary, does not require Node.js and as such,
 is pretty fast. It can currently format JavaScript, TypeScript, JSX, and JSON, and may support
 [more frontend languages](https://biomejs.dev/internals/language-support/) such as CSS in the future.
-
-Note: Biome [was formerly called Rome](https://biomejs.dev/blog/annoucing-biome/). Configurations with
-the old `<rome>` tag and `rome(...)` function are still supported for the time being. This will be removed
-in a future version, you should migrate to the new `<biome>` tag or `biome(...)` function. The configuration
-remains the same, you only need to update the version. If you are using a custom `rome.json` configuration file,
-you need to rename it to `biome.json`.
 
 You can use Biome in any language-specific format for supported languages, but
 usually you will be creating a generic format.
