@@ -63,6 +63,22 @@ public class SpotlessCheckMojo extends AbstractSpotlessMojo {
 	@Parameter(defaultValue = "WARNING")
 	private MessageSeverity m2eIncrementalBuildMessageSeverity;
 
+	/**
+	 * When true, writes a machine-readable unified diff of all formatting violations to
+	 * {@link #patchOutputFile}. Unlike the console output, this patch has no line cap and
+	 * no visible-whitespace substitution, making it suitable for automated patch application.
+	 * Multiple formatters (java, xml, etc.) append to the same file.
+	 */
+	@Parameter(defaultValue = "false")
+	private boolean generatePatchFile;
+
+	/**
+	 * Output path for the machine-readable patch file written when {@link #generatePatchFile}
+	 * is true.
+	 */
+	@Parameter(defaultValue = "${project.build.directory}/spotless-diff/violations.patch")
+	private File patchOutputFile;
+
 	@Override
 	protected void process(Iterable<File> files, Formatter formatter, UpToDateChecker upToDateChecker) throws MojoExecutionException {
 		ImpactedFilesTracker counter = new ImpactedFilesTracker();
@@ -104,11 +120,14 @@ public class SpotlessCheckMojo extends AbstractSpotlessMojo {
 		}
 
 		if (!problemFiles.isEmpty()) {
-			throw new MojoExecutionException(DiffMessageFormatter.builder()
+			DiffMessageFormatter.Builder diffBuilder = DiffMessageFormatter.builder()
 					.runToFix("Run 'mvn spotless:apply' to fix these violations.")
 					.formatter(formatter)
-					.problemFiles(problemFiles)
-					.getMessage());
+					.problemFiles(problemFiles);
+			if (generatePatchFile && patchOutputFile != null) {
+				diffBuilder.patchOutputFile(patchOutputFile.toPath());
+			}
+			throw new MojoExecutionException(diffBuilder.getMessage());
 		}
 	}
 }

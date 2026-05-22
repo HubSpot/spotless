@@ -22,6 +22,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -116,6 +117,13 @@ public final class DiffMessageFormatter {
 		private String runToFix;
 		private CleanProvider formatter;
 		private List<File> problemFiles;
+		/**
+		 * When set, the full uncapped unified diff for all violation files is written here.
+		 * Unlike the human-readable error message, this patch uses standard unified diff format
+		 * with no visible-whitespace substitution, making it suitable for machine consumption
+		 * (e.g. applying via patch tools). Appended to if the file already exists.
+		 */
+		private Path patchOutputFile;
 
 		/** "Run 'gradlew spotlessApply' to fix these violations." */
 		public Builder runToFix(String runToFix) {
@@ -139,13 +147,18 @@ public final class DiffMessageFormatter {
 			return this;
 		}
 
+		public Builder patchOutputFile(Path patchOutputFile) {
+			this.patchOutputFile = patchOutputFile;
+			return this;
+		}
+
 		/** Returns the error message. */
 		public String getMessage() {
 			try {
 				Objects.requireNonNull(runToFix, "runToFix");
 				Objects.requireNonNull(formatter, "formatter");
 				Objects.requireNonNull(problemFiles, "problemFiles");
-				DiffMessageFormatter diffFormater = new DiffMessageFormatter(formatter, problemFiles);
+				DiffMessageFormatter diffFormater = new DiffMessageFormatter(formatter, problemFiles, patchOutputFile);
 				return "The following files had format violations:\n"
 						+ diffFormater.buffer
 						+ runToFix;
@@ -163,7 +176,7 @@ public final class DiffMessageFormatter {
 
 	private final CleanProvider formatter;
 
-	private DiffMessageFormatter(CleanProvider formatter, List<File> problemFiles) throws IOException {
+	private DiffMessageFormatter(CleanProvider formatter, List<File> problemFiles, Path patchOutputFile) throws IOException {
 		this.formatter = Objects.requireNonNull(formatter, "formatter");
 		ListIterator<File> problemIter = problemFiles.listIterator();
 		while (problemIter.hasNext() && numLines < MAX_CHECK_MESSAGE_LINES) {
@@ -181,6 +194,60 @@ public final class DiffMessageFormatter {
 				}
 			}
 		}
+		if (patchOutputFile != null) {
+			writePatchFile(problemFiles, patchOutputFile);
+		}
+	}
+
+	private void writePatchFile(List<File> problemFiles, Path outputFile) throws IOException {
+		StringBuilder patch = new StringBuilder();
+		for (File file : problemFiles) {
+			String entry = cleanPatchEntry(file);
+			if (entry != null) {
+				patch.append(entry);
+			}
+		}
+		if (patch.length() > 0) {
+			Files.createDirectories(outputFile.getParent());
+			Files.writeString(outputFile, patch.toString(), StandardCharsets.UTF_8,
+					StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+		}
+	}
+
+	/**
+	 * Returns a unified diff patch entry for the given file, without the visible-whitespace
+	 * substitution used in the human-readable error message. Returns null if there is no
+	 * content difference (e.g. a line-ending-only violation, which cannot be expressed as a
+	 * platform-neutral patch).
+	 */
+	private String cleanPatchEntry(File file) throws IOException {
+		String raw = new String(Files.readAllBytes(file.toPath()), formatter.getEncoding());
+		String rawUnix = LineEnding.toUnix(raw);
+		String formatted = formatter.getFormatted(file, rawUnix);
+		String formattedUnix = LineEnding.toUnix(formatted);
+
+		if (rawUnix.equals(formattedUnix)) {
+			return null;
+		}
+
+		RawText a = new RawText(rawUnix.getBytes(StandardCharsets.UTF_8));
+		RawText b = new RawText(formattedUnix.getBytes(StandardCharsets.UTF_8));
+		EditList edits = new EditList();
+		edits.addAll(MyersDiff.INSTANCE.diff(RawTextComparator.DEFAULT, a, b));
+
+		if (edits.isEmpty()) {
+			return null;
+		}
+
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		try (DiffFormatter df = new DiffFormatter(out)) {
+			df.format(edits, a, b);
+		}
+		String hunks = out.toString(StandardCharsets.UTF_8.name());
+		hunks = hunks.replace("\\ No newline at end of file\n", "");
+
+		String relPath = relativePath(file);
+		return "--- " + relPath + "\n+++ " + relPath + "\n" + hunks;
 	}
 
 	private String relativePath(File file) {
