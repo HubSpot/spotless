@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.diffplug.spotless</groupId>
+    <artifactId>spotless-parent</artifactId>
+    <version>3.0.0-hubspot-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>spotless-lib</artifactId>
+
+  <!--
+    The Gradle build compiles each formatter's glue code in isolated source sets so that
+    formatter libraries can be compileOnly (provided at runtime by the caller). This Maven
+    build collects the relevant source sets via build-helper-maven-plugin.
+
+    Excluded source sets and reasons:
+    - ktlint + all compatKtLint*: KtlintFormatterFunc imports all version-specific adapters
+      directly, requiring multiple conflicting ktlint versions in one compile unit.
+    - diktat + all compatDiktat*: same problem with conflicting diktat versions.
+    - scalafmt: requires Scala runtime on the compile classpath.
+    - ktfmt: requires Kotlin runtime on the compile classpath.
+    - palantirJavaFormat: alternative Java formatter not used by HubSpot.
+    HubSpot's spotless config only uses googleJavaFormat, so these omissions are fine.
+  -->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-glue-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/cleanthat/java</source>
+                <source>src/flexmark/java</source>
+                <source>src/gherkin/java</source>
+                <source>src/googleJavaFormat/java</source>
+                <source>src/gson/java</source>
+                <source>src/jackson/java</source>
+                <source>src/sortPom/java</source>
+                <source>src/zjsonPatch/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${ver.slf4j}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.github.solven-eu.cleanthat</groupId>
+      <artifactId>java</artifactId>
+      <version>2.20</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.vladsch.flexmark</groupId>
+      <artifactId>flexmark-all</artifactId>
+      <version>0.64.8</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.cucumber</groupId>
+      <artifactId>gherkin-utils</artifactId>
+      <version>9.0.0</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.google.googlejavaformat</groupId>
+      <artifactId>google-java-format</artifactId>
+      <version>1.22.0</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.10.1</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.17.1</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
+      <version>2.17.1</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ekryd.sortpom</groupId>
+      <artifactId>sortpom-sorter</artifactId>
+      <version>4.0.0</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.flipkart.zjsonpatch</groupId>
+      <artifactId>zjsonpatch</artifactId>
+      <version>0.4.16</version>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+</project>
