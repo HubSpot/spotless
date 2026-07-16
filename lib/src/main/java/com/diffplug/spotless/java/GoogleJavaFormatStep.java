@@ -42,19 +42,22 @@ public class GoogleJavaFormatStep implements java.io.Serializable {
 	private final boolean reflowLongStrings;
 	private final boolean reorderImports;
 	private final boolean formatJavadoc;
+	private final boolean skipVersionCheck;
 
 	private GoogleJavaFormatStep(JarState.Promised jarState,
 			String version,
 			String style,
 			boolean reflowLongStrings,
 			boolean reorderImports,
-			boolean formatJavadoc) {
+			boolean formatJavadoc,
+			boolean skipVersionCheck) {
 		this.jarState = jarState;
 		this.version = version;
 		this.style = style;
 		this.reflowLongStrings = reflowLongStrings;
 		this.reorderImports = reorderImports;
 		this.formatJavadoc = formatJavadoc;
+		this.skipVersionCheck = skipVersionCheck;
 	}
 
 	/** Creates a step which formats everything - code, import order, and unused imports. */
@@ -103,7 +106,8 @@ public class GoogleJavaFormatStep implements java.io.Serializable {
 		Objects.requireNonNull(style, "style");
 		Objects.requireNonNull(provisioner, "provisioner");
 
-		GoogleJavaFormatStep step = new GoogleJavaFormatStep(JarState.promise(() -> JarState.from(groupArtifact + ":" + version, provisioner)), version, style, reflowLongStrings, reorderImports, formatJavadoc);
+		boolean isCustomArtifact = !MAVEN_COORDINATE.equals(groupArtifact);
+		GoogleJavaFormatStep step = new GoogleJavaFormatStep(JarState.promise(() -> JarState.from(groupArtifact + ":" + version, provisioner)), version, style, reflowLongStrings, reorderImports, formatJavadoc, isCustomArtifact);
 		if (removeImports) {
 			return FormatterStep.create(NAME,
 					step,
@@ -149,7 +153,7 @@ public class GoogleJavaFormatStep implements java.io.Serializable {
 	}
 
 	private State equalityState() {
-		return new State(version, style, jarState.get(), reflowLongStrings, reorderImports, formatJavadoc);
+		return new State(version, style, jarState.get(), reflowLongStrings, reorderImports, formatJavadoc, skipVersionCheck);
 	}
 
 	private static final class State implements Serializable {
@@ -161,14 +165,18 @@ public class GoogleJavaFormatStep implements java.io.Serializable {
 		private final boolean reflowLongStrings;
 		private final boolean reorderImports;
 		private final boolean formatJavadoc;
+		private final boolean skipVersionCheck;
 
 		State(String version,
 				String style,
 				JarState jarState,
 				boolean reflowLongStrings,
 				boolean reorderImports,
-				boolean formatJavadoc) {
-			JVM_SUPPORT.assertFormatterSupported(version);
+				boolean formatJavadoc,
+				boolean skipVersionCheck) {
+			if (!skipVersionCheck) {
+				JVM_SUPPORT.assertFormatterSupported(version);
+			}
 			ModuleHelper.doOpenInternalPackagesIfRequired();
 			this.jarState = jarState;
 			this.version = version;
@@ -176,6 +184,7 @@ public class GoogleJavaFormatStep implements java.io.Serializable {
 			this.reflowLongStrings = reflowLongStrings;
 			this.reorderImports = reorderImports;
 			this.formatJavadoc = formatJavadoc;
+			this.skipVersionCheck = skipVersionCheck;
 		}
 
 		FormatterFunc createFormat() throws Exception {
@@ -184,6 +193,9 @@ public class GoogleJavaFormatStep implements java.io.Serializable {
 			Constructor<?> constructor = formatterFunc.getConstructor(String.class, String.class, boolean.class, boolean.class, boolean.class);
 			FormatterFunc googleJavaFormatFormatterFunc = (FormatterFunc) constructor.newInstance(version, style, reflowLongStrings, reorderImports, formatJavadoc);
 
+			if (skipVersionCheck) {
+				return googleJavaFormatFormatterFunc;
+			}
 			return JVM_SUPPORT.suggestLaterVersionOnError(version, googleJavaFormatFormatterFunc);
 		}
 
@@ -193,6 +205,9 @@ public class GoogleJavaFormatStep implements java.io.Serializable {
 			Constructor<?> constructor = formatterFunc.getConstructor(String.class); //version
 			FormatterFunc googleJavaFormatRemoveUnusedImporterFormatterFunc = (FormatterFunc) constructor.newInstance(version);
 
+			if (skipVersionCheck) {
+				return googleJavaFormatRemoveUnusedImporterFormatterFunc;
+			}
 			return JVM_SUPPORT.suggestLaterVersionOnError(version, googleJavaFormatRemoveUnusedImporterFormatterFunc);
 		}
 	}
